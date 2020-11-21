@@ -23,6 +23,7 @@ test('should be able to iterate by for..await', async (t) => {
   for (const fixture of fixtures) {
     result.yield(fixture)
   }
+  // 停止迭代，不是的话，就会一直 promise 等待在哪里
   result.done()
   let index = 0
   for await (const value of result) {
@@ -36,8 +37,10 @@ test('should be able to throw error', async (t) => {
   const err = new TypeError('You bad bad')
   result.reject(err)
   try {
+    // eslint-disable-next-line no-empty, no-unused-vars
     for await (const _ of result) {
     }
+    // 永远不会到达这里
     throw new TypeError('Unreachable error')
   } catch (e) {
     t.is(e, err)
@@ -48,6 +51,7 @@ test('should be able to wait the deferred value', (t) => {
   const result = new ConcurrencyResult<number>()
   const timeout = 1000
 
+  // 异步任务
   setTimeout(() => {
     result.yield(1)
     result.done()
@@ -59,6 +63,7 @@ test('should be able to wait the deferred value', (t) => {
     for await (const value of result) {
       t.is(value, 1)
     }
+    // 计量时间
     d.resolve()
   }
   runSpec()
@@ -82,6 +87,7 @@ test('should be able to reject when some value still deferred', (t) => {
 
   async function runSpec() {
     try {
+      // eslint-disable-next-line no-empty, no-unused-vars
       for await (const _ of result) {
       }
       throw new TypeError('Unreachable error')

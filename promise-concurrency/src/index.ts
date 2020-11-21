@@ -1,4 +1,5 @@
 import { ConcurrencyResult } from './concurrency-result'
+import { defer } from './defer'
 
 export type Task<T> = () => Promise<T>
 
@@ -6,11 +7,167 @@ export class PromiseConcurrencyController<T> {
   activeCount = 0
   pendingCount = 0
 
-  constructor(public readonly size: number) {}
+  private workers: IterableIterator<Task<T>>[]
 
-  run(...tasks: Task<T>[]): ConcurrencyResult<T> {}
+  private result: ConcurrencyResult<T> = null as any
+  private tasks: Task<T>[] = []
+  private isPaused = false
 
-  async stop(): Promise<void> {}
+  private defer = defer<void>()
+  private contorolPause = defer<void>()
 
-  resume() {}
+  constructor(public readonly size: number) {
+    // 创建一个对应大小的 workers 空数组
+    this.workers = new Array(size)
+  }
+
+  private async do(item: Task<T>) {
+    this.activeCount++
+    const r = await item()
+    this.activeCount--
+
+    this.pendingCount--
+
+    if (this.pendingCount === 0) {
+      // 结束迭代
+      this.result.done()
+    }
+    this.result.yield(r)
+  }
+
+  // ConcurrencyResult 就是查看结果的工具
+  // 先完成只能调用一次 run
+  run(...tasks: Task<T>[]): ConcurrencyResult<T> {
+    if (!tasks.length) {
+      throw new Error('need tasks')
+    }
+    this.pendingCount = this.pendingCount + tasks.length
+
+    this.result = this.result ?? new ConcurrencyResult<T>()
+
+    this.tasks = [...this.tasks, ...tasks]
+
+    // 判断是不是第一次
+    this.pendingCount === tasks.length &&
+      // 因为调用 run 是同步的, 让他在下一个事件循环里面去搞, 就能拿到最后 run 的最终信息
+      setTimeout(() => {
+        // 填充为同一个 Iterator
+        this.workers.fill(this.tasks.values())
+        this.workers.forEach(async (i) => {
+          // 每个 worker 都会去进行迭代，也就是并发
+          for (const item of i) {
+            try {
+              if (!this.isPaused) {
+                await this.do(item)
+                if (!this.activeCount && this.isPaused) {
+                  this.defer.resolve()
+                  await this.contorolPause.promise
+                }
+              } else {
+                await this.contorolPause.promise
+                this.do(item)
+              }
+            } catch (error) {
+              if (!this.isPaused) {
+                this.result.reject(error)
+              } else {
+                this.defer.resolve()
+                // 等着再次唤醒
+                await this.contorolPause.promise
+              }
+            }
+          }
+        })
+      }, 0)
+
+    return this.result
+  }
+
+  async stop(): Promise<void> {
+    this.isPaused = true
+    return this.defer.promise
+  }
+
+  resume() {
+    this.isPaused = false
+    this.contorolPause.resolve()
+    this.contorolPause = defer<void>()
+  }
 }
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+const a = new PromiseConcurrencyController<number>(2)
+
+a.run(
+  async () => {
+    await sleep(1000)
+    return 1
+  },
+  async () => {
+    await sleep(1000)
+    return 2
+  },
+  async () => {
+    await sleep(1000)
+    return 3
+  },
+  async () => {
+    await sleep(1000)
+    return 4
+  },
+  async () => {
+    await sleep(1000)
+    return 5
+  },
+  async () => {
+    await sleep(1000)
+    return 6
+  }
+)
+
+const i1 = a.run(
+  async () => {
+    await sleep(1000)
+    return 1
+  },
+  async () => {
+    await sleep(1000)
+    return 2
+  },
+  async () => {
+    await sleep(1000)
+    return 3
+  },
+  async () => {
+    await sleep(1000)
+    return 4
+  },
+  async () => {
+    await sleep(1000)
+    return 5
+  },
+  async () => {
+    await sleep(1000)
+    return 6
+  }
+)
+
+// 开始执行的时候并没有数据，然后直接就 done 了
+;(async () => {
+  for await (const iterator of i1) {
+    console.log(iterator)
+  }
+})()
+
+setTimeout(async () => {
+  console.log('dd' + a.activeCount)
+  await a.stop()
+  console.log('dd' + a.activeCount)
+}, 1000)
+
+setTimeout(() => {
+  a.resume()
+}, 3000)
