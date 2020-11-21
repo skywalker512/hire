@@ -9,12 +9,12 @@ export class PromiseConcurrencyController<T> {
 
   private workers: IterableIterator<Task<T>>[]
 
-  private result: ConcurrencyResult<T> = null as any
+  private result  = new ConcurrencyResult<T>()
   private tasks: Task<T>[] = []
   private isPaused = false
 
   private defer = defer<void>()
-  private contorolPause = defer<void>()
+  private controlPause = defer<void>()
 
   constructor(public readonly size: number) {
     // 创建一个对应大小的 workers 空数组
@@ -41,9 +41,8 @@ export class PromiseConcurrencyController<T> {
     if (!tasks.length) {
       throw new Error('need tasks')
     }
-    this.pendingCount = this.pendingCount + tasks.length
 
-    this.result = this.result ?? new ConcurrencyResult<T>()
+    this.pendingCount = this.pendingCount + tasks.length
 
     this.tasks = [...this.tasks, ...tasks]
 
@@ -59,13 +58,15 @@ export class PromiseConcurrencyController<T> {
             try {
               if (!this.isPaused) {
                 await this.do(item)
+                // 有可能在 await 的过程中 this.isPaused 被修改了
                 if (!this.activeCount && this.isPaused) {
                   this.defer.resolve()
-                  await this.contorolPause.promise
+                  await this.controlPause.promise
                 }
               } else {
-                await this.contorolPause.promise
-                this.do(item)
+                await this.controlPause.promise
+                // 需要重做被暂停的
+                await this.do(item)
               }
             } catch (error) {
               if (!this.isPaused) {
@@ -73,7 +74,7 @@ export class PromiseConcurrencyController<T> {
               } else {
                 this.defer.resolve()
                 // 等着再次唤醒
-                await this.contorolPause.promise
+                await this.controlPause.promise
               }
             }
           }
@@ -90,8 +91,8 @@ export class PromiseConcurrencyController<T> {
 
   resume() {
     this.isPaused = false
-    this.contorolPause.resolve()
-    this.contorolPause = defer<void>()
+    this.controlPause.resolve()
+    this.controlPause = defer<void>()
   }
 }
 

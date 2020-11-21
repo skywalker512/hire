@@ -15,7 +15,7 @@
   },
   "scripts": {
     "test": "ava --verbose",
-    "start": "node src/index.js"
+    "start": "node -r \"@swc-node/register\" src/index.ts"
   },
   "ava": {
     "extensions": [
