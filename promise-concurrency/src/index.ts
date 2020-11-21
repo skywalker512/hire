@@ -9,7 +9,7 @@ export class PromiseConcurrencyController<T> {
 
   private workers: IterableIterator<Task<T>>[]
 
-  private result  = new ConcurrencyResult<T>()
+  private result = new ConcurrencyResult<T>()
   private tasks: Task<T>[] = []
   private isPaused = false
 
@@ -86,7 +86,7 @@ export class PromiseConcurrencyController<T> {
 
   async stop(): Promise<void> {
     this.isPaused = true
-    return this.defer.promise
+    return this.activeCount ? this.defer.promise : Promise.resolve()
   }
 
   resume() {
@@ -96,9 +96,9 @@ export class PromiseConcurrencyController<T> {
   }
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
+// function sleep(ms: number) {
+//   return new Promise((resolve) => setTimeout(resolve, ms))
+// }
 
 const a = new PromiseConcurrencyController<number>(2)
 
@@ -156,19 +156,26 @@ const i1 = a.run(
   }
 )
 
-// 开始执行的时候并没有数据，然后直接就 done 了
-;(async () => {
-  for await (const iterator of i1) {
-    console.log(iterator)
-  }
-})()
+// // 开始执行的时候并没有数据，然后直接就 done 了
+// ;(async () => {
+//   const size = 2
+//   const controller = new PromiseConcurrencyController(size)
+//   const tasks = Array.from({ length: 10 }, () => async () => {
+//     await sleep(Math.random() * 100)
+//   })
+//   const a = controller.run(...tasks)
+//   // eslint-disable-next-line no-unused-vars, no-empty
+//   for await (const _ of a) {
+//     console.log(controller.activeCount)
+//   }
+// })()
 
-setTimeout(async () => {
-  console.log('dd' + a.activeCount)
-  await a.stop()
-  console.log('dd' + a.activeCount)
-}, 1000)
+// setTimeout(async () => {
+//   console.log('dd' + a.activeCount)
+//   await a.stop()
+//   console.log('dd' + a.activeCount)
+// }, 1000)
 
-setTimeout(() => {
-  a.resume()
-}, 3000)
+// setTimeout(() => {
+//   a.resume()
+// }, 3000)
