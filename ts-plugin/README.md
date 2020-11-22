@@ -1,5 +1,8 @@
 # 简单的 `TypeScript transform plugin`
 
+## Copy from
+https://github.com/ChristianMurphy/babel-plugin-transform-dynamic-imports-to-static-imports
+
 ## 背景介绍
 在大型单页应用中, 我们会经常使用 `dynamic import` 语法对应用进行 chunk 切分和异步加载。
 
