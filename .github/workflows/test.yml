@@ -28,6 +28,11 @@ jobs:
     - name: Install dependencies           
       run: |
         yarn install --frozen-lockfile --check-files --non-interactive --registry https://registry.npmjs.org/
+
+    - name: Eslint
+      uses: getsentry/action-eslint-fix@v1
+      with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Run Test
       run: yarn test
       env:
