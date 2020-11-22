@@ -86,7 +86,11 @@ export class PromiseConcurrencyController<T> {
 
   async stop(): Promise<void> {
     this.isPaused = true
-    return this.activeCount ? this.defer.promise : Promise.resolve()
+    return this.activeCount
+      ? this.defer.promise
+      : this.isPaused
+      ? this.defer.promise
+      : Promise.resolve()
   }
 
   resume() {
@@ -95,87 +99,3 @@ export class PromiseConcurrencyController<T> {
     this.controlPause = defer<void>()
   }
 }
-
-// function sleep(ms: number) {
-//   return new Promise((resolve) => setTimeout(resolve, ms))
-// }
-
-const a = new PromiseConcurrencyController<number>(2)
-
-a.run(
-  async () => {
-    await sleep(1000)
-    return 1
-  },
-  async () => {
-    await sleep(1000)
-    return 2
-  },
-  async () => {
-    await sleep(1000)
-    return 3
-  },
-  async () => {
-    await sleep(1000)
-    return 4
-  },
-  async () => {
-    await sleep(1000)
-    return 5
-  },
-  async () => {
-    await sleep(1000)
-    return 6
-  }
-)
-
-const i1 = a.run(
-  async () => {
-    await sleep(1000)
-    return 1
-  },
-  async () => {
-    await sleep(1000)
-    return 2
-  },
-  async () => {
-    await sleep(1000)
-    return 3
-  },
-  async () => {
-    await sleep(1000)
-    return 4
-  },
-  async () => {
-    await sleep(1000)
-    return 5
-  },
-  async () => {
-    await sleep(1000)
-    return 6
-  }
-)
-
-// // 开始执行的时候并没有数据，然后直接就 done 了
-// ;(async () => {
-//   const size = 2
-//   const controller = new PromiseConcurrencyController(size)
-//   const tasks = Array.from({ length: 10 }, () => async () => {
-//     await sleep(Math.random() * 100)
-//   })
-//   const a = controller.run(...tasks)
-//   // eslint-disable-next-line no-unused-vars, no-empty
-//   for await (const _ of a) {
-//     console.log(controller.activeCount)
-//   }
-// })()
-
-// setTimeout(async () => {
-//   console.log('dd' + a.activeCount)
-//   await a.stop()
-//   console.log('dd' + a.activeCount)
-// }, 1000)
-
-// setTimeout(() => {
-//   a.resume()
-// }, 3000)

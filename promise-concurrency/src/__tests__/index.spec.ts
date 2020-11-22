@@ -1,5 +1,4 @@
-import ava, { TestInterface } from 'ava'
-import Sinon from 'sinon'
+import ava from 'ava'
 
 import { PromiseConcurrencyController } from '../index'
 
@@ -7,9 +6,7 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-const test = ava as TestInterface<{
-  timer: Sinon.SinonFakeTimers
-}>
+const test = ava
 
 test('should be able to handle random concurrency and run can call many times', async (t) => {
   const size = Math.floor(Math.random() * 100)
@@ -19,11 +16,10 @@ test('should be able to handle random concurrency and run can call many times', 
   const tasks = Array.from({ length }, () => async () => {
     await sleep(10)
   })
-  // 浅复制
+
   controller.run(...tasks)
   const result = controller.run(...tasks)
 
-  t.timeout((length / size) * 100 * 2 + 200)
   // eslint-disable-next-line no-unused-vars
   for await (const _ of result) {
     t.true(controller.activeCount <= size)
