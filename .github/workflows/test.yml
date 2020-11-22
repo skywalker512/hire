@@ -27,7 +27,7 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.node-version }}-yarn-${{ hashFiles('**/yarn.lock') }}
     - name: Install dependencies           
       run: |
-        yarn install --frozen-lockfile --registry https://registry.npmjs.org/
+        yarn install --frozen-lockfile --check-files --non-interactive --registry https://registry.npmjs.org/
     - name: Run Test
       run: yarn test
       env:
